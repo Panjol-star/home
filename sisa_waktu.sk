@@ -1,0 +1,136 @@
+options:
+    prefix: &6&lѕʏѕᴛᴇᴍ-ᴡᴀʀɴ&7 » 
+
+# 1. Mendaftarkan Placeholder untuk TAB/PAPI
+placeholderapi placeholder with the prefix "skriptplaceholders":
+    if the identifier is "sisa_waktu":
+        if {unlimited::%player's uuid%} is true:
+            set the result to "&bUnlimited"
+        else:
+            if {bataswaktu::%player's uuid%} is not set:
+                set {bataswaktu::%player's uuid%} to 60
+
+            if {waktubermain::%player's uuid%} is not set:
+                set {waktubermain::%player's uuid%} to 0
+
+            set {_sisa} to {bataswaktu::%player's uuid%} - {waktubermain::%player's uuid%}
+
+            if {_sisa} < 0:
+                set {_sisa} to 0
+
+            # Format waktu
+            if {_sisa} >= 60:
+                set {_jam} to floor({_sisa} / 60)
+                set {_menit} to mod({_sisa}, 60)
+
+                if {_menit} > 0:
+                    set {_format} to "%{_jam}%j %{_menit}%m"
+                else:
+                    set {_format} to "%{_jam}%j"
+            else:
+                set {_format} to "%{_sisa}%m"
+
+            # Warna indikator
+            if {_sisa} > 15:
+                set the result to "&a%{_format}%"
+            else if {_sisa} > 5:
+                set the result to "&e%{_format}%"
+            else:
+                set the result to "&c%{_format}%"
+
+# 2. Command Kustomisasi Waktu
+command /istirahat <text>:
+    description: Atur batas waktu bermainmu sendiri atau matikan limit.
+    usage: &cFormat: /istirahat <1j/60m/tidak>
+    trigger:
+        # --- LOGIKA UNTUK "TIDAK" / "NO" ---
+        if arg-1 is "tidak" or "no":
+            if {unlimited::%player's uuid%} is true:
+                send "{@prefix} &cKamu kan sudah dalam mode &bUnlimited&c, nggak usah ngetik 'no' lagi cuy! 🤣"
+                play sound "entity.villager.no" with volume 1 and pitch 1 to player
+                stop
+            else:
+                set {unlimited::%player's uuid%} to true
+                set {waktubermain::%player's uuid%} to 0
+                send "{@prefix} &aMode &bUnlimited &aaktif! Selamat bermain sepuasnya."
+                play sound "entity.player.levelup" with volume 1 and pitch 1 to player
+                stop
+
+        # --- LOGIKA UNTUK INPUT WAKTU (1j/60m) ---
+        set {_input} to arg-1
+        
+        if {_input} contains "j":
+            set {_raw} to {_input}
+            replace all "j" with "" in {_raw}
+            set {_limit} to ({_raw} parsed as number) * 60
+        else if {_input} contains "m":
+            set {_raw} to {_input}
+            replace all "m" with "" in {_raw}
+            set {_limit} to {_raw} parsed as number
+        else:
+            set {_limit} to {_input} parsed as number
+            
+        if {_limit} is not set:
+            send "{@prefix} &cFormat salah! Gunakan format &e1j&c, &e60m&c, atau &etidak&c."
+            stop
+        if {_limit} <= 0:
+            send "{@prefix} &cWaktu harus lebih dari 0 menit!"
+            stop
+            
+        # Set variabel batas dan matikan mode unlimited
+        set {bataswaktu::%player's uuid%} to {_limit}
+        set {waktubermain::%player's uuid%} to 0
+        set {unlimited::%player's uuid%} to false
+        
+        send "{@prefix} &aBatas waktu bermain diatur ke &e%{_limit}% Menit&a."
+        send "{@prefix} &eStatus: &cTerbatas (Timer Aktif)"
+        play sound "entity.experience_orb.pickup" with volume 1 and pitch 1 to player
+
+# 3. Logika Hitungan Waktu
+every 1 minute:
+    loop all players:
+        # Cek variabel, bukan permission
+        if {unlimited::%loop-player's uuid%} is not true:
+            if {bataswaktu::%loop-player's uuid%} is not set:
+                set {bataswaktu::%loop-player's uuid%} to 60
+            if {waktubermain::%loop-player's uuid%} is not set:
+                set {waktubermain::%loop-player's uuid%} to 0
+                
+            add 1 to {waktubermain::%loop-player's uuid%}
+            set {_waktu} to {waktubermain::%loop-player's uuid%}
+            set {_batas} to {bataswaktu::%loop-player's uuid%}
+            set {_sisa} to {_batas} - {_waktu}
+            
+            # Notifikasi Sound (sama seperti sebelumnya)
+            if {_sisa} is 30:
+                send "{@prefix} Sisa waktu bermain tinggal &e30 menit&7." to loop-player
+                play sound "block.note_block.pling" with volume 1 and pitch 0.5 to loop-player
+            else if {_sisa} is 10:
+                send "{@prefix} Sisa waktu bermain tinggal &e10 menit&7!" to loop-player
+                play sound "block.note_block.pling" with volume 1 and pitch 1 to loop-player
+            else if {_sisa} is 5:
+                send "{@prefix} &c&lPERINGATAN! &c5 Menit lagi kamu akan di-kick." to loop-player
+                play sound "block.note_block.pling" with volume 1 and pitch 1.5 to loop-player
+            else if {_sisa} <= 3:
+                if {_sisa} > 0:
+                    send "{@prefix} &c&lWAKTU KRITIS! &fSisa &e%{_sisa}% menit!" to loop-player
+                    play sound "block.note_block.pling" with volume 1 and pitch 2 to loop-player
+                
+            if {_waktu} >= {_batas}:
+                set {waktubermain::%loop-player's uuid%} to 0
+                play sound "block.anvil.land" with volume 1 and pitch 1 to loop-player
+                wait 2 ticks
+                kick loop-player due to "&cWaktu bermain habis! (%{_batas}% Menit)%nl%&fSilahkan istirahat sejenak agar tetap bugar."
+
+# 4. Command Cek (Admin)
+command /cekistirahat:
+    permission: cek.istirahat
+    trigger:
+        send "&b&lMonitoring Waktu Bermain"
+        loop all players:
+            if {unlimited::%loop-player's uuid%} is true:
+                send "&f- %loop-player% &8» &bUnlimited"
+            else:
+                set {_w} to {waktubermain::%loop-player's uuid%}
+                set {_b} to {bataswaktu::%loop-player's uuid%}
+                send "&f- %loop-player% &8» &e%{_w}%/%{_b}%m"
