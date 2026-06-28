@@ -22,9 +22,10 @@ jobs:
 
       - name: Download Clang Toolchain
         run: |
-          # Menggunakan git clone agar terhindar dari error download curl/tar
-          git clone --depth=1 https://github.com/ZyC-roms/clang.git -b 14 toolchain/clang
+          # Menggunakan Proton Clang versi publik yang dijamin bisa diclone tanpa login
+          git clone --depth=1 https://gitlab.com/CarbonROM/android_prebuilts_clang_host_linux-x86_clang-proton.git toolchain/clang
           echo "$(pwd)/toolchain/clang/bin" >> $GITHUB_PATH
+          
           
           
           
