@@ -22,13 +22,10 @@ jobs:
 
       - name: Download Clang Toolchain
         run: |
-          mkdir -p toolchain/clang
-          cd toolchain/clang
-          # Mengunduh AOSP Clang r450784d resmi
-          curl -LO https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/tags/android-13.0.0_r0.111/clang-r450784d.tar.gz
-          tar -xf clang-r450784d.tar.gz
-          rm clang-r450784d.tar.gz
-          echo "$(pwd)/bin" >> $GITHUB_PATH
+          # Menggunakan git clone agar terhindar dari error download curl/tar
+          git clone --depth=1 https://github.com/ZyC-roms/clang.git -b 14 toolchain/clang
+          echo "$(pwd)/toolchain/clang/bin" >> $GITHUB_PATH
+          
           
           
 
