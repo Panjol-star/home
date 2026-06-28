@@ -32,8 +32,8 @@ jobs:
       - name: Patch KernelSU Next
         run: |
           cd kernel
-          # Menjalankan skrip otomatis KernelSU Next
-          curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/main/kernel/setup.sh" | bash -
+          # Mengunduh source KernelSU Next langsung ke folder drivers/kernelsu
+          git clone --depth=1 https://github.com/rifsxd/KernelSU-Next drivers/kernelsu
           
           # Melakukan penambahan otomatis ke drivers/Makefile jika belum ada
           if ! grep -q "obj-y += kernelsu/" drivers/Makefile; then
@@ -41,7 +41,6 @@ jobs:
           fi
 
           # Menambahkan config ke defconfig target Anda
-          # (Mengubah holi-qgki_defconfig dan moto-holi.config)
           echo "CONFIG_KSU=y" >> arch/arm64/configs/vendor/holi-qgki_defconfig
           echo "CONFIG_KSU_NEXT=y" >> arch/arm64/configs/vendor/holi-qgki_defconfig
           
@@ -49,6 +48,7 @@ jobs:
             echo "CONFIG_KSU=y" >> arch/arm64/configs/vendor/ext_config/moto-holi.config
             echo "CONFIG_KSU_NEXT=y" >> arch/arm64/configs/vendor/ext_config/moto-holi.config
           fi
+          
 
       - name: Build Kernel
         run: |
