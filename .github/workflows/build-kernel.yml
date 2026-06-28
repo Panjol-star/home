@@ -1,0 +1,75 @@
+name: Build Moto G45 Kernel
+
+on:
+  workflow_dispatch: # Memungkinkan Anda menjalankan build secara manual dari tab Actions
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Kernel Source
+        uses: actions/checkout@v4
+        with:
+          repository: 'LineageOS/android_kernel_motorola_sm6375'
+          ref: 'lineage-23.2' # Sesuaikan dengan branch yang Anda gunakan
+          path: kernel
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf lib32readline-dev lib32z1-dev liblz4-tool libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev LayoutCanvas
+
+      - name: Download Clang Toolchain
+        run: |
+          mkdir toolchain
+          cd toolchain
+          # Mengunduh AOSP Clang (Sesuaikan versi Clang jika diperlukan, contoh: r450784d)
+          curl -LO https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r450784d.tar.gz
+          tar -xf clang-r450784d.tar.gz
+          echo "$(pwd)/bin" >> $GITHUB_PATH
+
+      - name: Patch KernelSU Next
+        run: |
+          cd kernel
+          # Menjalankan skrip otomatis KernelSU Next
+          curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/main/kernel/setup.sh" | bash -
+          
+          # Melakukan penambahan otomatis ke drivers/Makefile jika belum ada
+          if ! grep -q "obj-y += kernelsu/" drivers/Makefile; then
+            echo "obj-y += kernelsu/" >> drivers/Makefile
+          fi
+
+          # Menambahkan config ke defconfig target Anda
+          # (Mengubah holi-qgki_defconfig dan moto-holi.config)
+          echo "CONFIG_KSU=y" >> arch/arm64/configs/vendor/holi-qgki_defconfig
+          echo "CONFIG_KSU_NEXT=y" >> arch/arm64/configs/vendor/holi-qgki_defconfig
+          
+          if [ -f arch/arm64/configs/vendor/ext_config/moto-holi.config ]; then
+            echo "CONFIG_KSU=y" >> arch/arm64/configs/vendor/ext_config/moto-holi.config
+            echo "CONFIG_KSU_NEXT=y" >> arch/arm64/configs/vendor/ext_config/moto-holi.config
+          fi
+
+      - name: Build Kernel
+        run: |
+          cd kernel
+          export ARCH=arm64
+          export SUBARCH=arm64
+          export HEADER_ARCH=arm64
+          export CC=clang
+          export CLANG_TRIPLE=aarch64-linux-gnu-
+          export CROSS_COMPILE=aarch64-linux-gnu-
+          
+          # Jalankan defconfig
+          make O=out vendor/holi-qgki_defconfig
+          
+          # Mulai proses kompilasi
+          make -j$(nproc --all) O=out
+
+      - name: Upload Kernel Image
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kernel-Moto-G45-KSU
+          path: |
+            kernel/out/arch/arm64/boot/Image
+            kernel/out/arch/arm64/boot/dtb.img
+            
