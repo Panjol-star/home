@@ -24,10 +24,10 @@ jobs:
         run: |
           mkdir toolchain
           cd toolchain
-          # Mengunduh AOSP Clang (Sesuaikan versi Clang jika diperlukan, contoh: r450784d)
-          curl -LO https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r450784d.tar.gz
-          tar -xf clang-r450784d.tar.gz
-          echo "$(pwd)/bin" >> $GITHUB_PATH
+          # Menggunakan Proton Clang yang lebih stabil untuk kompilasi kernel Android
+          git clone --depth=1 https://github.com/kdrag0n/proton-clang.git clang
+          echo "$(pwd)/clang/bin" >> $GITHUB_PATH
+          
 
       - name: Patch KernelSU Next
         run: |
