@@ -22,11 +22,14 @@ jobs:
 
       - name: Download Clang Toolchain
         run: |
-          mkdir toolchain
-          cd toolchain
-          # Menggunakan Proton Clang yang lebih stabil untuk kompilasi kernel Android
-          git clone --depth=1 https://github.com/kdrag0n/proton-clang.git clang
-          echo "$(pwd)/clang/bin" >> $GITHUB_PATH
+          mkdir -p toolchain/clang
+          cd toolchain/clang
+          # Mengunduh AOSP Clang r450784d resmi
+          curl -LO https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/tags/android-13.0.0_r0.111/clang-r450784d.tar.gz
+          tar -xf clang-r450784d.tar.gz
+          rm clang-r450784d.tar.gz
+          echo "$(pwd)/bin" >> $GITHUB_PATH
+          
           
 
       - name: Patch KernelSU Next
@@ -57,6 +60,7 @@ jobs:
           export SUBARCH=arm64
           export HEADER_ARCH=arm64
           export CC=clang
+          export LD=ld.lld
           export CLANG_TRIPLE=aarch64-linux-gnu-
           export CROSS_COMPILE=aarch64-linux-gnu-
           
@@ -64,7 +68,8 @@ jobs:
           make O=out vendor/holi-qgki_defconfig
           
           # Mulai proses kompilasi
-          make -j$(nproc --all) O=out
+          make -j$(nproc --all) O=out CC=clang LD=ld.lld CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=aarch64-linux-gnu-
+          
 
       - name: Upload Kernel Image
         uses: actions/upload-artifact@v4
